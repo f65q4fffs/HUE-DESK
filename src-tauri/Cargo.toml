@@ -1,0 +1,30 @@
+[package]
+name = "hue-light-app"
+version = "0.1.0"
+description = "Contrôleur local Philips Hue ultra-léger (<40 Mo RAM)"
+authors = ["Hue Developer"]
+edition = "2021"
+
+[lib]
+name = "hue_light_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-single-instance = "2"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+mdns-sd = "0.13"
+anyhow = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
