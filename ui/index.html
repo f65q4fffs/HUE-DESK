@@ -3,45 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Philips Hue Controller</title>
+  <title>HueDesk</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app-window">
-    <!-- Barre Supérieure Globale -->
-    <header class="app-header">
-      <div class="brand">
-        <img src="huedesklogo.svg" alt="HueDesk Logo" class="brand-logo" />
-        <span class="app-title">HueDesk</span>
+    <!-- Barre Supérieure & En-tête de l'application Style macOS Sonoma -->
+    <header class="app-header" data-tauri-drag-region>
+      <!-- Contrôles de fenêtre macOS Feux Tricolores -->
+      <div class="traffic-lights">
+        <button id="win-btn-close" class="traffic-btn close" title="Masquer dans la barre des tâches"></button>
+        <button id="win-btn-minimize" class="traffic-btn minimize" title="Réduire"></button>
+        <button id="win-btn-maximize" class="traffic-btn maximize" title="Agrandir / Restaurer"></button>
       </div>
 
-      <div class="header-right">
-        <div class="bridge-badge" id="bridge-status-badge">
-          <span class="status-indicator"></span>
-          <span id="bridge-status-text">Connexion...</span>
+      <div class="brand" data-tauri-drag-region>
+        <img src="huedesklogo.svg" alt="HueDesk Logo" class="brand-logo" data-tauri-drag-region />
+        <div class="brand-text" data-tauri-drag-region>
+          <span class="app-title" data-tauri-drag-region>Hue Desk</span>
+          <div class="connection-status" id="connection-status" data-tauri-drag-region>
+            <span class="status-dot"></span>
+            <span id="bridge-status-text">Recherche du pont...</span>
+          </div>
         </div>
-
-        <button id="btn-master-off" class="header-btn btn-danger" title="Tout éteindre" style="display: none;">
-          <span class="icon">🌙</span> Tout éteindre
-        </button>
-
-        <button id="btn-minimize-tray" class="header-icon-btn" title="Réduire vers la barre des tâches">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M2 7H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
       </div>
+
+      <!-- Contrôle Segmenté macOS Sonoma (Navigation) -->
+      <nav class="macos-segmented-control" id="main-nav-tabs">
+        <button id="nav-tab-lights" class="segmented-item active">
+          <svg class="seg-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+          <span>Pièces & Lampes</span>
+        </button>
+        <button id="nav-tab-profiles" class="segmented-item">
+          <svg class="seg-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          <span>Profils & Ambiances</span>
+        </button>
+        <button id="nav-tab-audio" class="segmented-item">
+          <svg class="seg-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span>Audio Visualizer</span>
+        </button>
+      </nav>
     </header>
 
-    <!-- VUE 1 : APPAIRAGE -->
+    <!-- VUE 1 : APPAIRAGE (si non configuré) -->
     <main id="view-pairing" class="view-container">
+      <button id="btn-pairing-back" class="btn btn-sm btn-ghost hidden" style="margin-bottom: 12px; align-self: flex-start;">
+        <span class="icon">←</span> Retour au tableau de bord
+      </button>
       <div class="pairing-hero">
         <h2>Configuration du Pont Philips Hue</h2>
-        <p class="subtitle">Recherche automatique des ponts sur votre réseau local (mDNS)</p>
+        <p class="subtitle">Recherche automatique sur votre réseau local (mDNS)</p>
       </div>
 
       <div class="pairing-content">
-        <!-- Liste des ponts trouvés -->
         <div class="bridges-section">
           <div class="section-header">
             <h3>Ponts détectés</h3>
@@ -58,9 +72,8 @@
           </div>
         </div>
 
-        <!-- Saisie Manuelle de l'IP -->
         <div class="manual-section">
-          <h3>Méthode alternative : Saisie manuelle</h3>
+          <h3>Saisie manuelle de l'adresse IP</h3>
           <div class="manual-input-row">
             <input type="text" id="manual-bridge-ip" placeholder="Ex: 192.168.1.50" />
             <button id="btn-connect-manual" class="btn btn-secondary">Associer cette IP</button>
@@ -69,7 +82,7 @@
         </div>
       </div>
 
-      <!-- Modale Overlay : Appui sur le bouton physique du pont -->
+      <!-- Modale Overlay : Appui sur le bouton du pont -->
       <div id="modal-pairing" class="modal-overlay hidden">
         <div class="modal-card">
           <div class="bridge-graphic">
@@ -93,22 +106,348 @@
       </div>
     </main>
 
-    <!-- VUE 2 : DASHBOARD -->
+    <!-- VUE 2 : DASHBOARD PRINCIPAL -->
     <main id="view-dashboard" class="view-container hidden">
-      <div class="dashboard-toolbar">
-        <div class="active-summary">
-          <span id="summary-active-count">0 lumières allumées</span>
+      <!-- Section Raccourcis Rapides -->
+      <section class="quick-actions-section">
+        <h2 class="section-subtitle">Raccourcis rapides</h2>
+        <div class="quick-actions-grid">
+          <button id="btn-quick-all-on" class="quick-btn">
+            <svg class="quick-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <span>Tout Allumer</span>
+          </button>
+          <button id="btn-quick-all-off" class="quick-btn">
+            <svg class="quick-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 0 1 0-16z"/></svg>
+            <span>Tout Éteindre</span>
+          </button>
+          <button id="btn-quick-night" class="quick-btn">
+            <svg class="quick-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <span>Nuit</span>
+          </button>
         </div>
-        <button id="btn-refresh-dashboard" class="btn btn-sm btn-ghost" title="Rafraîchir les lumières">
-          <span class="icon">🔄</span> Actualiser
+      </section>
+
+      <!-- Accordéon des Pièces -->
+      <section class="rooms-section">
+        <div id="rooms-accordion" class="accordion-container">
+          <!-- Les pièces et lampes sont injectées ici dynamiquement -->
+        </div>
+      </section>
+    </main>
+
+    <!-- VUE 2 : PROFILS & AMBIANCES -->
+    <main id="view-profiles" class="view-container hidden">
+      <div class="profiles-header-row">
+        <div class="profiles-title-col">
+          <h2>Profils d'Ambiance</h2>
+          <p class="subtitle">Activez vos atmosphères préférées en un clic</p>
+        </div>
+        <button id="btn-capture-profile" class="btn btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span>Capturer l'état actuel</span>
         </button>
       </div>
 
-      <!-- Accordéon par Pièces -->
-      <div id="rooms-accordion" class="accordion-container">
-        <!-- Rendu dynamique des pièces et de leurs luminaires -->
+      <!-- Grille des Profils -->
+      <div id="profiles-grid" class="profiles-grid">
+        <!-- Cartes de profils injectées dynamiquement -->
       </div>
     </main>
+
+    <!-- VUE 2.5 : AUDIO VISUALIZER (WASAPI LOOPBACK & FFT) -->
+    <main id="view-audio" class="view-container hidden">
+      <div class="audio-header-row">
+        <div class="audio-title-col">
+          <h2>Audio Visualizer</h2>
+          <p class="subtitle">WASAPI Loopback • Synchronisation lumineuse</p>
+        </div>
+        <div class="audio-toggle-wrap">
+          <span id="audio-badge-status" class="audio-badge-idle">EN PAUSE</span>
+          <label class="apple-switch" title="Activer / Désactiver la synchronisation audio">
+            <input type="checkbox" id="audio-master-toggle" />
+            <span class="apple-switch-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Carte Source Audio & VU-Mètre -->
+      <div class="audio-card audio-device-card">
+        <div class="audio-device-header">
+          <div class="audio-device-title">
+            <span class="audio-device-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg></span>
+            <span>Source Audio (Loopback)</span>
+          </div>
+          <button id="btn-refresh-audio-devices" class="btn-device-refresh" title="Actualiser la liste des périphériques">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+        </div>
+        <div class="audio-select-wrap">
+          <select id="audio-device-select" class="apple-dark-select" title="Périphérique audio source"></select>
+        </div>
+        <div class="audio-vu-meter-row" title="Niveau en direct du signal audio capturé">
+          <span class="vu-label">Signal</span>
+          <div class="vu-meter-bar">
+            <div id="audio-vu-fill" class="vu-meter-fill"></div>
+          </div>
+          <span id="audio-vu-pct" class="vu-pct">0%</span>
+        </div>
+      </div>
+
+      <!-- Visualiseur Spectral Dynamique Canvas -->
+      <div class="audio-visualizer-card">
+        <canvas id="audio-canvas" width="600" height="180"></canvas>
+        <div class="audio-live-meta">
+          <div class="audio-meta-item">
+            <span>Luminosité :</span>
+            <strong id="audio-meta-bri">50%</strong>
+          </div>
+          <div class="audio-meta-item">
+            <span>Teinte :</span>
+            <span class="audio-color-pill" id="audio-color-pill"></span>
+          </div>
+          <div class="audio-meta-item">
+            <span>Kick Bass :</span>
+            <div class="bass-meter-bar"><div id="bass-meter-fill"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panneau des Réglages & Personnalisation -->
+      <div class="audio-controls-grid">
+        <!-- Sensibilité -->
+        <div class="audio-card">
+          <div class="audio-card-label">
+            <span>Sensibilité (Gain)</span>
+            <span id="audio-gain-display">1.0x</span>
+          </div>
+          <input type="range" class="apple-slider" id="audio-gain-slider" min="0.5" max="4.0" step="0.1" value="1.0" />
+        </div>
+
+        <!-- Plage de Luminosité Dynamique (Min & Max) -->
+        <div class="audio-card">
+          <div class="audio-card-label">
+            <span>Dynamique Lumineuse</span>
+            <span id="audio-range-display">15% - 100%</span>
+          </div>
+          <div class="audio-dual-slider">
+            <div class="dual-slider-item">
+              <span class="sub-label">Min (Ambiance)</span>
+              <input type="range" class="apple-slider" id="audio-min-bri-slider" min="5" max="50" step="5" value="15" />
+            </div>
+            <div class="dual-slider-item">
+              <span class="sub-label">Max (Crêtes)</span>
+              <input type="range" class="apple-slider" id="audio-max-bri-slider" min="50" max="100" step="5" value="100" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Accentuation des Basses -->
+        <div class="audio-card audio-card-row">
+          <div class="audio-card-text">
+            <h4>Accentuation des Basses</h4>
+            <p>Pulsations intenses sur les kicks & percussions</p>
+          </div>
+          <label class="apple-switch">
+            <input type="checkbox" id="audio-bass-boost-toggle" checked />
+            <span class="apple-switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- Palettes de Couleurs -->
+        <div class="audio-card">
+          <div class="audio-card-label">
+            <span>Palette de Couleurs</span>
+          </div>
+          <div class="palette-picker-grid">
+            <button class="palette-btn selected" data-palette="neon">
+              <span class="palette-dot" style="background: linear-gradient(135deg, #00f3ff, #ff007f);"></span>
+              <span>Néon Cyberpunk</span>
+            </button>
+            <button class="palette-btn" data-palette="soft">
+              <span class="palette-dot" style="background: linear-gradient(135deg, #ff9500, #f48fb1);"></span>
+              <span>Ambiance Douce</span>
+            </button>
+            <button class="palette-btn" data-palette="party">
+              <span class="palette-dot" style="background: linear-gradient(135deg, #ff0033, #00ff66, #0077ff);"></span>
+              <span>Party Électro</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sélection des Lampes Participantes -->
+        <div class="audio-card">
+          <div class="audio-card-label">
+            <span>Lampes Participantes</span>
+            <button id="btn-select-all-audio-lights" class="btn-text-link">Tout cocher</button>
+          </div>
+          <div id="audio-lights-selector" class="audio-lights-list">
+            <!-- Injecté dynamiquement en JS -->
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- VUE 3 : PARAMÈTRES & CONFIGURATION -->
+    <main id="view-settings" class="view-container hidden">
+      <div class="settings-header-row">
+        <button id="btn-settings-back" class="btn btn-sm btn-ghost">
+          <span class="icon">←</span> Tableau de bord
+        </button>
+        <h2>Paramètres</h2>
+      </div>
+
+      <div class="settings-content">
+        <!-- Section Pont Hue -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <span class="settings-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></span>
+            <div class="settings-card-title">
+              <h3>Pont Philips Hue</h3>
+              <span class="settings-card-subtitle" id="settings-bridge-subtitle">Connecté en local</span>
+            </div>
+            <span class="badge-status-online" id="settings-bridge-badge">En ligne</span>
+          </div>
+          <div class="settings-card-body">
+            <div class="settings-info-row">
+              <span class="info-label">Adresse IP</span>
+              <span class="info-value" id="settings-bridge-ip">—</span>
+            </div>
+            <div class="settings-info-row">
+              <span class="info-label">Protocole</span>
+              <span class="info-value">HTTPS Locale CLIP v2</span>
+            </div>
+            <div class="settings-info-row">
+              <span class="info-label">Flux temps réel (SSE)</span>
+              <span class="info-value" id="settings-sse-status">Actif (synchronisation instantanée)</span>
+            </div>
+            <div class="settings-actions-row">
+              <button id="btn-settings-change-bridge" class="btn btn-secondary btn-sm">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                <span>Changer de pont / Reconnecter</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Application & Performance -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <span class="settings-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+            <div class="settings-card-title">
+              <h3>Performances & Système</h3>
+              <span class="settings-card-subtitle">Architecture ultra-légère Tauri v2 + Rust</span>
+            </div>
+          </div>
+          <div class="settings-card-body">
+            <div class="settings-info-row">
+              <span class="info-label">Empreinte mémoire</span>
+              <span class="info-value" style="color: var(--accent-green); font-weight:700;">~25-35 Mo RAM</span>
+            </div>
+            <div class="settings-info-row">
+              <span class="info-label">Mode fenêtre</span>
+              <span class="info-value">Frameless Custom Glass</span>
+            </div>
+            <div class="settings-info-row">
+              <span class="info-label">Version</span>
+              <span class="info-value">v0.1.0-alpha (Build natif)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Pied de page (Footer) -->
+    <footer class="app-footer">
+      <button id="btn-footer-settings" class="footer-link">
+        <svg class="footer-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Paramètres</span>
+      </button>
+      <span class="footer-divider">|</span>
+      <span class="footer-api">
+        <svg class="footer-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+        <span>API Locale CLIP v2</span>
+      </span>
+      <span class="footer-divider">|</span>
+      <span class="footer-version">v0.1.0-alpha</span>
+    </footer>
+    <!-- Menu Contextuel Clic Droit macOS -->
+    <div id="custom-context-menu" class="context-menu hidden">
+      <button id="menu-item-rename-light" class="context-menu-item hidden">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        <span>Renommer ce luminaire</span>
+      </button>
+      <button id="menu-item-toggle-light" class="context-menu-item hidden">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+        <span id="menu-text-toggle-light">Allumer / Éteindre</span>
+      </button>
+      <button id="menu-item-color-light" class="context-menu-item hidden">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20v-20z"/></svg>
+        <span>Régler la couleur & effets</span>
+      </button>
+      <div class="context-menu-separator hidden" id="menu-sep-light"></div>
+      <button id="menu-item-new-room" class="context-menu-item">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Créer une nouvelle pièce</span>
+      </button>
+    </div>
+
+    <!-- Modale Création de Pièce -->
+    <div id="modal-create-room" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h3>Nouvelle Pièce Philips Hue</h3>
+        <p class="modal-instruction">Entrez le nom de la nouvelle pièce à créer sur le pont local.</p>
+        <div class="manual-input-row" style="margin-top: 14px;">
+          <input type="text" id="new-room-name-input" placeholder="Ex: Salon, Bureau, Chambre 2..." style="flex:1;" />
+        </div>
+        <div class="modal-buttons-row" style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button id="btn-cancel-create-room" class="btn btn-ghost">Annuler</button>
+          <button id="btn-confirm-create-room" class="btn btn-primary">Créer la pièce</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modale Renommage Personnalisée (Remplacement de prompt()) -->
+    <div id="modal-rename" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h3 id="modal-rename-title">Renommer</h3>
+        <p class="modal-instruction" id="modal-rename-desc">Entrez le nouveau nom à appliquer sur le pont Hue local.</p>
+        <div class="manual-input-row" style="margin-top: 14px;">
+          <input type="text" id="rename-input" placeholder="Nouveau nom..." style="flex:1;" />
+        </div>
+        <div class="modal-buttons-row" style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button id="btn-cancel-rename" class="btn btn-ghost">Annuler</button>
+          <button id="btn-confirm-rename" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modale Création de Profil depuis l'état actuel -->
+    <div id="modal-create-profile" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h3>Nouveau Profil d'Ambiance</h3>
+        <p class="modal-instruction">Enregistrez la configuration lumineuse active de toutes vos lampes.</p>
+        <div class="manual-input-row" style="margin-top: 14px;">
+          <input type="text" id="new-profile-name-input" placeholder="Ex: Code & Focus, Soirée Détente..." style="flex:1;" />
+        </div>
+        <div class="icon-selector-group" style="margin-top: 14px;">
+          <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Choisir une icône d'ambiance :</span>
+          <div class="icon-picker-grid" id="profile-icon-picker">
+            <button class="icon-opt selected" data-icon="💻">💻</button>
+            <button class="icon-opt" data-icon="🎬">🎬</button>
+            <button class="icon-opt" data-icon="🍷">🍷</button>
+            <button class="icon-opt" data-icon="🌙">🌙</button>
+            <button class="icon-opt" data-icon="☀️">☀️</button>
+            <button class="icon-opt" data-icon="🎨">🎨</button>
+            <button class="icon-opt" data-icon="🚀">🚀</button>
+            <button class="icon-opt" data-icon="📚">📚</button>
+          </div>
+        </div>
+        <div class="modal-buttons-row" style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button id="btn-cancel-create-profile" class="btn btn-ghost">Annuler</button>
+          <button id="btn-confirm-create-profile" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="main.js"></script>

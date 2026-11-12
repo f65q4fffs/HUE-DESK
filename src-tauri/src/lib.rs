@@ -1,3 +1,4 @@
+pub mod audio;
 pub mod hue;
 
 use hue::HueState;
@@ -11,6 +12,24 @@ use tauri::{
 #[tauri::command]
 fn hide_window(window: Window) {
     let _ = window.hide();
+}
+
+/// Commande Tauri : Alterne entre agrandi et taille normale
+#[tauri::command]
+fn toggle_maximize(window: Window) {
+    if let Ok(is_max) = window.is_maximized() {
+        if is_max {
+            let _ = window.unminimize();
+        } else {
+            let _ = window.maximize();
+        }
+    }
+}
+
+/// Commande Tauri : Réduit la fenêtre
+#[tauri::command]
+fn minimize_window(window: Window) {
+    let _ = window.minimize();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -36,6 +55,7 @@ pub fn run() {
             }
 
             app.manage(hue_state);
+            app.manage(audio::AudioState::new());
 
             // Création des éléments du menu contextuel du System Tray
             let open_item = MenuItem::with_id(app, "open", "Ouvrir", true, None::<&str>)?;
@@ -48,7 +68,7 @@ pub fn run() {
             let mut tray_builder = TrayIconBuilder::new()
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
-                .tooltip("Contrôleur local Philips Hue")
+                .tooltip("HueDesk - Contrôleur local Philips Hue")
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "open" => {
                         if let Some(window) = app.get_webview_window("main") {
@@ -96,32 +116,26 @@ pub fn run() {
                     }
                 });
 
-            let has_icon = app.default_window_icon().is_some();
-            println!("[Tauri] default_window_icon disponible: {}", has_icon);
-
+            // Utilise l'icône par défaut de l'application si présente
             if let Some(icon) = app.default_window_icon() {
                 tray_builder = tray_builder.icon(icon.clone());
             }
 
-            match tray_builder.build(app) {
-                Ok(_) => println!("[Tauri] System Tray initialisé avec succès."),
-                Err(e) => eprintln!("[Tauri] Erreur d'initialisation du Tray: {:?}", e),
-            }
+            tray_builder.build(app)?;
 
             // Forcer l'affichage de la fenêtre principale
             if let Some(window) = app.get_webview_window("main") {
-                println!("[Tauri] Fenêtre principale détectée, affichage et focus...");
                 let _ = window.show();
                 let _ = window.unminimize();
                 let _ = window.set_focus();
-            } else {
-                eprintln!("[Tauri] ATTENTION : Fenêtre 'main' introuvable !");
             }
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             hide_window,
+            minimize_window,
+            toggle_maximize,
             hue::discover_bridge,
             hue::verify_manual_ip,
             hue::start_pairing,
@@ -132,7 +146,26 @@ pub fn run() {
             hue::set_brightness,
             hue::set_color,
             hue::set_color_temperature,
-            hue::toggle_room
+            hue::toggle_room,
+            hue::set_room_brightness,
+            hue::assign_light_to_room,
+            hue::set_light_effect,
+            hue::create_room,
+            hue::delete_room,
+            hue::rename_room,
+            hue::rename_light,
+            hue::set_room_color,
+            hue::set_room_effect,
+            hue::drag_window,
+            hue::profiles::get_profiles,
+            hue::profiles::save_profile,
+            hue::profiles::delete_profile,
+            hue::profiles::apply_profile,
+            hue::profiles::capture_current_profile,
+            audio::start_audio_sync,
+            audio::stop_audio_sync,
+            audio::get_audio_sync_status,
+            audio::get_audio_devices
         ])
         .on_window_event(|window, event| {
             // Interception de la fermeture : masquage dans le System Tray

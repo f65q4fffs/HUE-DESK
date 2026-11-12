@@ -6,6 +6,11 @@ Cargo.lock
 # Tauri
 /src-tauri/gen/
 
+# Config & Sensitive local data
+hue_config.json
+*.log
+plan.md
+
 # OS files
 Thumbs.db
 .DS_Store
