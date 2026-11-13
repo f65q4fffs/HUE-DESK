@@ -3,10 +3,42 @@ pub mod hue;
 
 use hue::HueState;
 use tauri::{
-    menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, Window, WindowEvent,
+    Emitter, Manager, Window, WindowEvent,
 };
+
+// Commande Tauri : Ouvre la fenêtre principale depuis le tray flyout
+#[tauri::command]
+fn open_main_window(app: tauri::AppHandle) {
+    if let Some(tray) = app.get_webview_window("tray") {
+        let _ = tray.hide();
+    }
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.show();
+        let _ = main.unminimize();
+        let _ = main.set_focus();
+    }
+}
+
+/// Commande Tauri : Ouvre les paramètres dans la fenêtre principale depuis le tray flyout
+#[tauri::command]
+fn open_settings_in_main(app: tauri::AppHandle) {
+    if let Some(tray) = app.get_webview_window("tray") {
+        let _ = tray.hide();
+    }
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.show();
+        let _ = main.unminimize();
+        let _ = main.set_focus();
+        let _ = main.emit("open-settings", ());
+    }
+}
+
+/// Commande Tauri : Quitte complètement l'application
+#[tauri::command]
+fn exit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
 
 /// Commande Tauri : Masque la fenêtre principale vers la zone de notification
 #[tauri::command]
@@ -57,62 +89,110 @@ pub fn run() {
             app.manage(hue_state);
             app.manage(audio::AudioState::new());
 
-            // Création des éléments du menu contextuel du System Tray
-            let open_item = MenuItem::with_id(app, "open", "Ouvrir", true, None::<&str>)?;
-            let turn_off_item = MenuItem::with_id(app, "turn_off", "Tout éteindre", true, None::<&str>)?;
-            let quit_item = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>)?;
-
-            let tray_menu = Menu::with_items(app, &[&open_item, &turn_off_item, &quit_item])?;
-
             // Construction de l'icône dans la barre des tâches (System Tray)
             let mut tray_builder = TrayIconBuilder::new()
-                .menu(&tray_menu)
                 .show_menu_on_left_click(false)
                 .tooltip("HueDesk - Contrôleur local Philips Hue")
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "open" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.unminimize();
-                            let _ = window.set_focus();
+                .on_tray_icon_event(|tray, event| {
+                    match event {
+                        TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } => {
+                            let app = tray.app_handle();
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.unminimize();
+                                let _ = window.set_focus();
+                            }
                         }
-                    }
-                    "turn_off" => {
-                        let app_clone = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            if let Some(state) = app_clone.try_state::<HueState>() {
-                                if let Ok(client) = state.get_client().await {
-                                    if let Ok(rooms) = client.get_rooms().await {
-                                        for room in rooms {
-                                            for service in room.services {
-                                                if service.rtype == "grouped_light" {
-                                                    let _ = client.update_grouped_light(&service.rid, false).await;
-                                                }
-                                            }
+                        TrayIconEvent::Click {
+                            button: MouseButton::Right,
+                            button_state: MouseButtonState::Up,
+                            rect,
+                            ..
+                        } => {
+                            let app = tray.app_handle();
+                            if let Some(tray_win) = app.get_webview_window("tray") {
+                                if tray_win.is_visible().unwrap_or(false) {
+                                    let _ = tray_win.hide();
+                                } else {
+                                    let scale_factor = tray_win.scale_factor().unwrap_or(1.0);
+                                    let win_w = 340.0 * scale_factor;
+                                    let win_h = 525.0 * scale_factor;
+
+                                    let monitor = tray_win
+                                        .current_monitor()
+                                        .ok()
+                                        .flatten()
+                                        .or_else(|| tray_win.primary_monitor().ok().flatten());
+
+                                    let (mon_x, mon_y, mon_w, mon_h) = if let Some(m) = monitor {
+                                        (
+                                            m.position().x as f64,
+                                            m.position().y as f64,
+                                            m.size().width as f64,
+                                            m.size().height as f64,
+                                        )
+                                    } else {
+                                        (0.0, 0.0, 1920.0 * scale_factor, 1080.0 * scale_factor)
+                                    };
+
+                                    let (tray_x, tray_y) = match rect.position {
+                                        tauri::Position::Physical(p) => (p.x as f64, p.y as f64),
+                                        tauri::Position::Logical(l) => {
+                                            (l.x * scale_factor, l.y * scale_factor)
                                         }
+                                    };
+
+                                    let (tray_w, _tray_h) = match rect.size {
+                                        tauri::Size::Physical(s) => (s.width as f64, s.height as f64),
+                                        tauri::Size::Logical(l) => {
+                                            (l.width * scale_factor, l.height * scale_factor)
+                                        }
+                                    };
+
+                                    let mut target_x = if tray_w > 0.0 {
+                                        tray_x + (tray_w / 2.0) - (win_w / 2.0)
+                                    } else {
+                                        mon_x + mon_w - win_w - (16.0 * scale_factor)
+                                    };
+
+                                    let min_x = mon_x + (8.0 * scale_factor);
+                                    let max_x = mon_x + mon_w - win_w - (8.0 * scale_factor);
+                                    if target_x < min_x {
+                                        target_x = min_x;
+                                    } else if target_x > max_x {
+                                        target_x = max_x;
                                     }
+
+                                    let mut target_y = if tray_y > 0.0 {
+                                        tray_y - win_h - (10.0 * scale_factor)
+                                    } else {
+                                        mon_y + mon_h - win_h - (60.0 * scale_factor)
+                                    };
+
+                                    let min_y = mon_y + (8.0 * scale_factor);
+                                    let max_y = mon_y + mon_h - win_h - (8.0 * scale_factor);
+                                    if target_y < min_y {
+                                        target_y = min_y;
+                                    } else if target_y > max_y {
+                                        target_y = max_y;
+                                    }
+
+                                    let _ = tray_win.set_position(tauri::PhysicalPosition::new(
+                                        target_x as i32,
+                                        target_y as i32,
+                                    ));
+
+                                    let _ = tray_win.set_shadow(false);
+                                    let _ = tray_win.show();
+                                    let _ = tray_win.set_focus();
                                 }
                             }
-                        });
-                    }
-                    "quit" => {
-                        app.exit(0);
-                    }
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.unminimize();
-                            let _ = window.set_focus();
                         }
+                        _ => {}
                     }
                 });
 
@@ -123,11 +203,16 @@ pub fn run() {
 
             tray_builder.build(app)?;
 
-            // Forcer l'affichage de la fenêtre principale
+            // Forcer l'affichage de la fenêtre principale sans ombre DWM Windows
             if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_shadow(false);
                 let _ = window.show();
                 let _ = window.unminimize();
                 let _ = window.set_focus();
+            }
+
+            if let Some(tray_win) = app.get_webview_window("tray") {
+                let _ = tray_win.set_shadow(false);
             }
 
             Ok(())
@@ -136,6 +221,9 @@ pub fn run() {
             hide_window,
             minimize_window,
             toggle_maximize,
+            open_main_window,
+            open_settings_in_main,
+            exit_app,
             hue::discover_bridge,
             hue::verify_manual_ip,
             hue::start_pairing,
@@ -168,6 +256,12 @@ pub fn run() {
             audio::get_audio_devices
         ])
         .on_window_event(|window, event| {
+            // Auto-masquage du mini-flyout dès qu'il perd le focus
+            if let WindowEvent::Focused(false) = event {
+                if window.label() == "tray" {
+                    let _ = window.hide();
+                }
+            }
             // Interception de la fermeture : masquage dans le System Tray
             if let WindowEvent::CloseRequested { api, .. } = event {
                 let _ = window.hide();

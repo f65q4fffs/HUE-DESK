@@ -23,6 +23,18 @@ function debounce(fn, wait = 50) {
   };
 }
 
+// Remplissage dynamique des sliders façon Apple Glass (actif à gauche, grisé à droite)
+function updateSliderVisualFill(slider, value, min, max, _gradientColor) {
+  if (!slider) return;
+  const val = parseFloat(value) || 0;
+  const minVal = min !== undefined ? min : (parseFloat(slider.min) || 0);
+  const maxVal = max !== undefined ? max : (parseFloat(slider.max) || 100);
+  const pct = Math.max(0, Math.min(100, ((val - minVal) / (maxVal - minVal)) * 100));
+
+  // Charte Philips Hue uniforme sur toute l'application (ambre & or chaud)
+  slider.style.background = `linear-gradient(to right, #b45309 0%, #f59e0b ${pct * 0.7}%, #fef08a ${pct}%, rgba(255, 255, 255, 0.12) ${pct}%, rgba(255, 255, 255, 0.12) 100%)`;
+}
+
 // Initialisation au chargement du DOM
 document.addEventListener("DOMContentLoaded", async () => {
   setupWindowControls();
@@ -343,7 +355,7 @@ let currentSpectrumData = {
   bins: new Array(24).fill(0),
   bass: 0,
   rms: 0,
-  current_hex: "#00f3ff",
+  current_hex: "#ff9f0a",
   current_brightness: 50,
 };
 let audioAnimFrameId = null;
@@ -426,7 +438,9 @@ function setupAudioVisualizerUI() {
   }
 
   if (gainSlider && gainDisplay) {
+    updateSliderVisualFill(gainSlider, gainSlider.value, 0.5, 4.0, "amber");
     gainSlider.addEventListener("input", () => {
+      updateSliderVisualFill(gainSlider, gainSlider.value, 0.5, 4.0, "amber");
       gainDisplay.textContent = `${parseFloat(gainSlider.value).toFixed(1)}x`;
       if (masterToggle && masterToggle.checked) {
         restartAudioSyncWithCurrentConfig();
@@ -442,7 +456,9 @@ function setupAudioVisualizerUI() {
   }
 
   if (minBriSlider) {
+    updateSliderVisualFill(minBriSlider, minBriSlider.value, 5, 50, "amber");
     minBriSlider.addEventListener("input", () => {
+      updateSliderVisualFill(minBriSlider, minBriSlider.value, 5, 50, "amber");
       updateRangeDisplay();
       if (masterToggle && masterToggle.checked) {
         restartAudioSyncWithCurrentConfig();
@@ -451,7 +467,9 @@ function setupAudioVisualizerUI() {
   }
 
   if (maxBriSlider) {
+    updateSliderVisualFill(maxBriSlider, maxBriSlider.value, 50, 100, "amber");
     maxBriSlider.addEventListener("input", () => {
+      updateSliderVisualFill(maxBriSlider, maxBriSlider.value, 50, 100, "amber");
       updateRangeDisplay();
       if (masterToggle && masterToggle.checked) {
         restartAudioSyncWithCurrentConfig();
@@ -591,7 +609,7 @@ function setupAudioVisualizerUI() {
     const barSpacing = 4;
     const totalSpacing = (numBars + 1) * barSpacing;
     const barWidth = Math.max(3, (width - totalSpacing) / numBars);
-    const hex = currentSpectrumData.current_hex || "#00f3ff";
+    const hex = currentSpectrumData.current_hex || "#ff9f0a";
 
     for (let i = 0; i < numBars; i++) {
       const val = bins[i] || 0;
@@ -601,7 +619,7 @@ function setupAudioVisualizerUI() {
 
       const barGrad = ctx.createLinearGradient(0, y, 0, height);
       barGrad.addColorStop(0, hex);
-      barGrad.addColorStop(1, "rgba(56, 189, 248, 0.12)");
+      barGrad.addColorStop(1, "rgba(255, 159, 10, 0.08)");
 
       ctx.fillStyle = barGrad;
       ctx.beginPath();
@@ -616,15 +634,15 @@ function setupAudioVisualizerUI() {
       ctx.shadowBlur = 0;
     }
 
-    // Double onde fluide lumineuse style macOS Sonoma / Siri Neon
+    // Double onde fluide lumineuse style Philips Hue Amber & Gold
     const now = Date.now() * 0.006;
     const bass = currentSpectrumData.bass || 0;
 
-    // Onde 1 : Cyan Néon Principal
+    // Onde 1 : Ambre chaud Philips Hue
     ctx.beginPath();
-    ctx.strokeStyle = "#00f3ff";
+    ctx.strokeStyle = "#ff9f0a";
     ctx.lineWidth = 2.4;
-    ctx.shadowColor = "#00f3ff";
+    ctx.shadowColor = "#ff9f0a";
     ctx.shadowBlur = 12;
     for (let i = 0; i < numBars; i++) {
       const val = bins[i] || 0;
@@ -636,11 +654,11 @@ function setupAudioVisualizerUI() {
     }
     ctx.stroke();
 
-    // Onde 2 : Magenta / Violet Néon Secondaire
+    // Onde 2 : Or chaud lumineux Philips Hue
     ctx.beginPath();
-    ctx.strokeStyle = "#ff007f";
+    ctx.strokeStyle = "#fef08a";
     ctx.lineWidth = 2.0;
-    ctx.shadowColor = "#ff007f";
+    ctx.shadowColor = "#fef08a";
     ctx.shadowBlur = 12;
     for (let i = 0; i < numBars; i++) {
       const val = bins[numBars - 1 - i] || 0;
@@ -714,6 +732,13 @@ function setupFooter() {
   const btnSettings = document.getElementById("btn-footer-settings");
   if (btnSettings) {
     btnSettings.addEventListener("click", () => {
+      switchView("settings");
+    });
+  }
+
+  // Écoute de l'événement Tauri déclenché depuis le mini-flyout (System Tray)
+  if (window.__TAURI__ && window.__TAURI__.event) {
+    window.__TAURI__.event.listen("open-settings", () => {
       switchView("settings");
     });
   }
@@ -1251,6 +1276,7 @@ function renderAccordion() {
     const mSlider = roomItem.querySelector(".room-master-slider");
     const mPct = roomItem.querySelector(".room-brightness-pct");
     if (mSlider) {
+      updateSliderVisualFill(mSlider, mSlider.value);
       const sendRoomBrightness = debounce(async (val) => {
         try {
           if (room.id !== "unassigned") {
@@ -1270,6 +1296,7 @@ function renderAccordion() {
       }, 50);
 
       mSlider.addEventListener("input", (e) => {
+        updateSliderVisualFill(mSlider, e.target.value);
         if (mPct) mPct.textContent = `${e.target.value}%`;
         sendRoomBrightness(e.target.value);
       });
@@ -1764,6 +1791,8 @@ function createLightTile(light, allRooms, currentRoomId) {
   toggleInput.addEventListener("change", toggleLightState);
 
   // Interaction 2 : Slider de Luminosité avec debounce 50ms
+  if (bSlider) updateSliderVisualFill(bSlider, bSlider.value);
+
   const sendBrightness = debounce(async (val) => {
     try {
       await tauriCore.invoke("set_brightness", { lightId: light.id, brightness: parseFloat(val) });
@@ -1779,6 +1808,7 @@ function createLightTile(light, allRooms, currentRoomId) {
   });
   bSlider.addEventListener("input", (e) => {
     bSlider.dataset.interacting = "true";
+    updateSliderVisualFill(bSlider, e.target.value);
     bDisplay.textContent = `${e.target.value}%`;
     if (!toggleInput.checked) {
       toggleInput.checked = true;
@@ -2118,12 +2148,14 @@ function updateLightTileVisuals(lightId, isOn, brightnessVal = null) {
       subtitle.innerHTML = `<span class="status-tag-on">Allumée</span> <span class="status-tag-pct">• ${val}%</span>`;
     }
     if (bDisplay) bDisplay.textContent = `${val}%`;
+    if (bSlider) updateSliderVisualFill(bSlider, val);
   } else {
     tile.classList.remove("on");
     tile.classList.add("off");
     if (subtitle) {
       subtitle.innerHTML = `<span class="status-tag-off">Éteinte</span>`;
     }
+    if (bSlider) updateSliderVisualFill(bSlider, val);
   }
 }
 

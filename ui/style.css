@@ -1,3 +1,27 @@
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/Inter-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/Inter-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/Inter-Bold.woff2') format('woff2');
+}
+
 :root {
   --bg-app: #141517;
   --bg-header: rgba(26, 26, 30, 0.78);
@@ -29,7 +53,7 @@
   --radius-sm: 8px;
 
   --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
   color-scheme: dark;
 }
 
@@ -41,12 +65,15 @@
 }
 
 body {
-  background: radial-gradient(circle at 50% -20%, rgba(55, 58, 68, 0.45) 0%, rgba(20, 21, 24, 0.98) 75%), #141517;
+  background: transparent !important;
   color: var(--text-main);
   user-select: none;
   overflow: hidden;
   height: 100vh;
   width: 100vw;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 /* Scrollbars modernes fines (6px, thumb #334155, rounded-full) */
@@ -71,7 +98,12 @@ body {
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background: transparent;
+  box-sizing: border-box;
+  background: radial-gradient(circle at 50% -20%, #2a2d36 0%, #131418 75%), #131418 !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  overflow: hidden;
+  box-shadow: none !important;
 }
 
 /* ================= 1. HEADER macOS SONOMA ================= */
@@ -802,33 +834,34 @@ input:checked + .apple-switch-slider:before {
 .apple-slider {
   -webkit-appearance: none;
   width: 100%;
-  height: 16px;
+  height: 8px;
   border-radius: 9999px;
   outline: none;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.12);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.08s ease;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
-.brightness-slider {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 159, 10, 0.85) 100%);
+.brightness-slider,
+.room-master-slider {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .apple-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.12);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   cursor: pointer;
   transition: transform 0.12s ease;
 }
 
 .apple-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.12);
+  transform: scale(1.15);
 }
 
 /* Ligne Température de Blanc (Kelvin 2700K - 6500K) + Pastille 32x32px */
@@ -1979,9 +2012,9 @@ input:checked + .apple-switch-slider:before {
 }
 
 .btn-device-refresh:hover {
-  background: rgba(56, 189, 248, 0.2);
-  border-color: rgba(56, 189, 248, 0.4);
-  color: #38bdf8;
+  background: rgba(255, 159, 10, 0.15);
+  border-color: rgba(255, 159, 10, 0.4);
+  color: #ff9f0a;
   transform: rotate(90deg);
 }
 
@@ -2018,8 +2051,8 @@ input:checked + .apple-switch-slider:before {
 }
 
 .apple-dark-select:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  border-color: #ff9f0a;
+  box-shadow: 0 0 0 2px rgba(255, 159, 10, 0.2);
 }
 
 .apple-dark-select option {
@@ -2058,7 +2091,7 @@ input:checked + .apple-switch-slider:before {
 .vu-meter-fill {
   width: 0%;
   height: 100%;
-  background: linear-gradient(90deg, #10b981 0%, #06b6d4 50%, #eab308 80%, #ef4444 100%);
+  background: linear-gradient(90deg, #10b981 0%, #ff9f0a 60%, #ef4444 100%);
   border-radius: 3px;
   transition: width 0.05s linear;
 }
@@ -2066,7 +2099,7 @@ input:checked + .apple-switch-slider:before {
 .vu-pct {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #38bdf8;
+  color: #ff9f0a;
   min-width: 32px;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -2115,9 +2148,9 @@ input:checked + .apple-switch-slider:before {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #00f3ff;
+  background: #ff9f0a;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 8px #00f3ff;
+  box-shadow: 0 0 8px rgba(255, 159, 10, 0.5);
   transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -2205,8 +2238,8 @@ input:checked + .apple-switch-slider:before {
 }
 
 .palette-btn {
-  background: #151d2f;
-  border: 1px solid #243048;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 8px 10px;
   cursor: pointer;
@@ -2220,14 +2253,16 @@ input:checked + .apple-switch-slider:before {
 }
 
 .palette-btn:hover {
-  background: #1c263c;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
   color: #f8fafc;
 }
 
 .palette-btn.selected {
-  border-color: #38bdf8;
-  background: rgba(56, 189, 248, 0.12);
-  color: #38bdf8;
+  border-color: #ff9f0a;
+  background: rgba(255, 159, 10, 0.14);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(255, 159, 10, 0.3);
 }
 
 .palette-dot {
@@ -2251,27 +2286,30 @@ input:checked + .apple-switch-slider:before {
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px;
-  background: #131b2b;
-  border: 1px solid #202b3f;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   font-size: 0.78rem;
+  color: #f4f4f5;
   cursor: pointer;
   user-select: none;
+  transition: all 0.15s ease;
 }
 
 .audio-light-item:hover {
-  background: #182236;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .audio-light-item input {
   cursor: pointer;
-  accent-color: #38bdf8;
+  accent-color: #30d158;
 }
 
 .btn-text-link {
   background: transparent;
   border: none;
-  color: #38bdf8;
+  color: #ff9f0a;
   font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
